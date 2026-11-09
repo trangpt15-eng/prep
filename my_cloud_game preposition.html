@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Falling Cloud Quiz Game</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link href="https://fonts.googleapis.com/css2?family=Mali:ital,wght@0,400;0,600;0,700;1,400&amp;display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        :root {
+            --primary: #a78bfa;
+            --primary-hover: #8b5cf6;
+        }
+
+        body {
+            font-family: 'Mali', cursive;
+            margin: 0;
+            overflow-x: hidden;
+            background-color: #f8fafc;
+        }
+
+        #editor-view {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #e0e7ff 0%, #fae8ff 100%);
+            padding: 2rem 1rem;
+        }
+
+        #game-view {
+            display: none;
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background-image: url('background_2.jpg');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            overflow: hidden;
+        }
+
+        #question-container {
+            position: absolute;
+            top: 5%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90vw;
+            max-width: 700px;
+            aspect-ratio: 16 / 9;
+            background-image: url('box_2.png');
+            background-size: 100% 100%;
+            background-position: center;
+            background-repeat: no-repeat;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            /* LOWER Z-INDEX than falling options */
+            z-index: 10;
+            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.1));
+            padding: 8% 12%;
+        }
+
+        #question-image-display {
+            flex: 1;
+            min-height: 0;
+            width: 100%;
+            object-fit: contain;
+            margin-bottom: 0.5rem;
+            border-radius: 12px;
+            display: none;
+        }
+
+        #question-text {
+            font-weight: 700;
+            color: #4c1d95;
+            text-align: center;
+            word-wrap: break-word;
+            line-height: 1.3;
+            flex-shrink: 0;
+            max-height: 100%;
+            overflow: hidden;
+        }
+
+        #falling-options-container {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 30; /* HIGHER Z-INDEX to fall IN FRONT of the center box */
+        }
+
+        .falling-option {
+            position: absolute;
+            top: -300px;
+            width: 35vw;
+            max-width: 250px;
+            aspect-ratio: 4 / 3;
+            background-size: 100% 100%;
+            background-position: center;
+            background-repeat: no-repeat;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            pointer-events: auto;
+            transition: transform 0.2s ease, filter 0.2s ease;
+            animation: fallDown 20s linear infinite backwards; 
+        }
+
+        .falling-option:hover {
+            transform: scale(1.1);
+            filter: drop-shadow(0 0 15px rgba(255,255,255,0.8));
+            animation-play-state: paused; 
+        }
+
+        .falling-option-text {
+            font-size: clamp(1rem, 2.5vw, 1.5rem);
+            font-weight: 700;
+            color: #1e3a8a;
+            text-align: center;
+            padding: 15% 20%;
+            pointer-events: none; 
+            word-wrap: break-word;
+            max-height: 100%;
+            overflow: hidden;
+        }
+
+        @keyframes fallDown {
+            0% { top: -300px; }
+            100% { top: 120vh; }
+        }
+
+        #custom-message {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(4px);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .message-content {
+            background-image: url('box_2.png');
+            background-size: 100% 100%;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-color: transparent;
+            width: 90vw;
+            max-width: 600px;
+            aspect-ratio: 16 / 9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            text-align: center;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .game-hud {
+            position: absolute;
+            padding: 0.5rem 1.5rem;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 2rem;
+            font-weight: bold;
+            font-size: 1.2rem;
+            color: #374151;
+            z-index: 50;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+    </style>
+
+    <script id="save-data">
+window.GAME_DATA = [{"id":"j2lcnq5j5","text":"Find the prepositions","image":null,"options":[{"id":"dp85kcy0h","text":"in","isCorrect":true},{"id":"3q4fs5o6m","text":"me","isCorrect":false},{"id":"r0gylulys","text":"is","isCorrect":false},{"id":"cr742no5d","text":"am","isCorrect":false},{"id":"h9vpj2gql","text":"are","isCorrect":false}]},{"id":"vs4x7an5t","text":"Find the prepositions","image":null,"options":[{"id":"3wxbtrxpl","text":"about","isCorrect":true},{"id":"68u7n18yv","text":"taste","isCorrect":false},{"id":"qmkvqug2n","text":"seem","isCorrect":false},{"id":"r83texroy","text":"me","isCorrect":false}]},{"id":"pa5ro02ot","text":"Find the prepositions","image":null,"options":[{"id":"n6jr107le","text":"with","isCorrect":true},{"id":"7ikcc5wea","text":"like to","isCorrect":false},{"id":"a38q785vw","text":"will","isCorrect":false},{"id":"a6ng2duch","text":"could","isCorrect":false}]},{"id":"xjlnr4nl2","text":"Find the prepositions","image":null,"options":[{"id":"6norll065","text":"for","isCorrect":true},{"id":"1ntv7150h","text":"buy","isCorrect":false},{"id":"t9xm0hiba","text":"go","isCorrect":false},{"id":"6snps9lv6","text":"can","isCorrect":false}]},{"id":"mpsdm2h2u","text":"Find the prepositions","image":null,"options":[{"id":"d116oxuli","text":"across","isCorrect":true},{"id":"c7xfes5ab","text":"am","isCorrect":false},{"id":"bhpncgcpi","text":"me","isCorrect":false},{"id":"6u6u1tws5","text":"you","isCorrect":false},{"id":"oukkhbrrr","text":"who","isCorrect":false}]},{"id":"fv1b0tk73","text":"Find the prepositions","image":null,"options":[{"id":"g1d1tm4ur","text":"after","isCorrect":true},{"id":"hzs9pc1z2","text":"go","isCorrect":false},{"id":"odmfyxnii","text":"fly","isCorrect":false},{"id":"rko4obmki","text":"be","isCorrect":false}]},{"id":"yzm6g88gq","text":"Find the prepositions","image":null,"options":[{"id":"w8d9bavlx","text":"below","isCorrect":true},{"id":"3jih4v5sw","text":"love","isCorrect":false},{"id":"jzom3mrfk","text":"want","isCorrect":false},{"id":"om3z92rnd","text":"need","isCorrect":false}]},{"id":"z07ibbgja","text":"Find the prepositions","image":null,"options":[{"id":"at7gqi772","text":"until","isCorrect":true},{"id":"6eq562mz9","text":"I","isCorrect":false},{"id":"wj6mqbkqj","text":"which","isCorrect":false}]},{"id":"8vh1yfno6","text":"Find the prepositions","image":null,"options":[{"id":"yc1d00y4l","text":"under","isCorrect":true},{"id":"t9lhbrrxi","text":"desk","isCorrect":false},{"id":"m2xj5mqj9","text":"the","isCorrect":false},{"id":"379nq0a65","text":"an","isCorrect":false}]},{"id":"kr1svt5fw","text":"Find the prepositions","image":null,"options":[{"id":"cvstnw5rh","text":"outside","isCorrect":true},{"id":"aagz7vcr6","text":"tree","isCorrect":false},{"id":"hjxyxdj7w","text":"would","isCorrect":false},{"id":"sii8894wq","text":"mind","isCorrect":false}]}];
+window.AUTO_START_PLAY = true;
+</script>
+<style>*, ::before, ::after{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }/* ! tailwindcss v3.4.17 | MIT License | https://tailwindcss.com */*,::after,::before{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}::after,::before{--tw-content:''}:host,html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;font-family:ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-feature-settings:normal;font-variation-settings:normal;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-feature-settings:inherit;font-variation-settings:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}dialog{padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}.absolute{position:absolute}.relative{position:relative}.inset-0{inset:0px}.right-4{right:1rem}.top-4{top:1rem}.z-50{z-index:50}.mx-auto{margin-left:auto;margin-right:auto}.mb-2{margin-bottom:0.5rem}.mb-4{margin-bottom:1rem}.mb-8{margin-bottom:2rem}.mt-10{margin-top:2.5rem}.mt-3{margin-top:0.75rem}.mt-4{margin-top:1rem}.flex{display:flex}.hidden{display:none}.h-5{height:1.25rem}.h-6{height:1.5rem}.w-11\/12{width:91.666667%}.w-10{width:2.5rem}.w-5{width:1.25rem}.w-6{width:1.5rem}.w-full{width:100%}.max-w-5xl{max-width:64rem}.max-w-lg{max-width:32rem}.flex-1{flex:1 1 0%}.flex-shrink-0{flex-shrink:0}@keyframes pulse{50%{opacity:.5}}.animate-pulse{animation:pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite}.cursor-pointer{cursor:pointer}.resize-none{resize:none}.flex-col{flex-direction:column}.items-center{align-items:center}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-4{gap:1rem}.gap-6{gap:1.5rem}.gap-2{gap:0.5rem}.gap-3{gap:0.75rem}.space-y-6 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1.5rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1.5rem * var(--tw-space-y-reverse))}.space-y-3 > :not([hidden]) ~ :not([hidden]){--tw-space-y-reverse:0;margin-top:calc(0.75rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(0.75rem * var(--tw-space-y-reverse))}.overflow-hidden{overflow:hidden}.rounded-3xl{border-radius:1.5rem}.rounded-full{border-radius:9999px}.rounded-2xl{border-radius:1rem}.rounded-lg{border-radius:0.5rem}.rounded-xl{border-radius:0.75rem}.border-2{border-width:2px}.border-4{border-width:4px}.border-t-2{border-top-width:2px}.border-b-2{border-bottom-width:2px}.border-gray-100{--tw-border-opacity:1;border-color:rgb(243 244 246 / var(--tw-border-opacity, 1))}.border-pink-300{--tw-border-opacity:1;border-color:rgb(249 168 212 / var(--tw-border-opacity, 1))}.border-purple-200{--tw-border-opacity:1;border-color:rgb(233 213 255 / var(--tw-border-opacity, 1))}.border-gray-200{--tw-border-opacity:1;border-color:rgb(229 231 235 / var(--tw-border-opacity, 1))}.border-green-300{--tw-border-opacity:1;border-color:rgb(134 239 172 / var(--tw-border-opacity, 1))}.border-purple-100{--tw-border-opacity:1;border-color:rgb(243 232 255 / var(--tw-border-opacity, 1))}.border-transparent{border-color:transparent}.bg-blue-500{--tw-bg-opacity:1;background-color:rgb(59 130 246 / var(--tw-bg-opacity, 1))}.bg-green-500{--tw-bg-opacity:1;background-color:rgb(34 197 94 / var(--tw-bg-opacity, 1))}.bg-indigo-500{--tw-bg-opacity:1;background-color:rgb(99 102 241 / var(--tw-bg-opacity, 1))}.bg-purple-500{--tw-bg-opacity:1;background-color:rgb(168 85 247 / var(--tw-bg-opacity, 1))}.bg-white{--tw-bg-opacity:1;background-color:rgb(255 255 255 / var(--tw-bg-opacity, 1))}.bg-white\/80{background-color:rgb(255 255 255 / 0.8)}.bg-white\/90{background-color:rgb(255 255 255 / 0.9)}.bg-blue-100{--tw-bg-opacity:1;background-color:rgb(219 234 254 / var(--tw-bg-opacity, 1))}.bg-gray-50{--tw-bg-opacity:1;background-color:rgb(249 250 251 / var(--tw-bg-opacity, 1))}.bg-green-50{--tw-bg-opacity:1;background-color:rgb(240 253 244 / var(--tw-bg-opacity, 1))}.bg-purple-100{--tw-bg-opacity:1;background-color:rgb(243 232 255 / var(--tw-bg-opacity, 1))}.bg-red-50{--tw-bg-opacity:1;background-color:rgb(254 242 242 / var(--tw-bg-opacity, 1))}.bg-transparent{background-color:transparent}.bg-gradient-to-r{background-image:linear-gradient(to right, var(--tw-gradient-stops))}.from-purple-400{--tw-gradient-from:#c084fc var(--tw-gradient-from-position);--tw-gradient-to:rgb(192 132 252 / 0) var(--tw-gradient-to-position);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.to-pink-400{--tw-gradient-to:#f472b6 var(--tw-gradient-to-position)}.p-10{padding:2.5rem}.p-6{padding:1.5rem}.p-8{padding:2rem}.p-2{padding:0.5rem}.p-3{padding:0.75rem}.p-4{padding:1rem}.px-10{padding-left:2.5rem;padding-right:2.5rem}.px-8{padding-left:2rem;padding-right:2rem}.py-4{padding-top:1rem;padding-bottom:1rem}.px-4{padding-left:1rem;padding-right:1rem}.py-1{padding-top:0.25rem;padding-bottom:0.25rem}.py-2{padding-top:0.5rem;padding-bottom:0.5rem}.pt-8{padding-top:2rem}.text-center{text-align:center}.text-2xl{font-size:1.5rem;line-height:2rem}.text-4xl{font-size:2.25rem;line-height:2.5rem}.text-5xl{font-size:3rem;line-height:1}.text-lg{font-size:1.125rem;line-height:1.75rem}.text-xl{font-size:1.25rem;line-height:1.75rem}.text-sm{font-size:0.875rem;line-height:1.25rem}.font-bold{font-weight:700}.font-extrabold{font-weight:800}.font-semibold{font-weight:600}.font-medium{font-weight:500}.tracking-wider{letter-spacing:0.05em}.text-gray-700{--tw-text-opacity:1;color:rgb(55 65 81 / var(--tw-text-opacity, 1))}.text-pink-500{--tw-text-opacity:1;color:rgb(236 72 153 / var(--tw-text-opacity, 1))}.text-purple-100{--tw-text-opacity:1;color:rgb(243 232 255 / var(--tw-text-opacity, 1))}.text-purple-600{--tw-text-opacity:1;color:rgb(147 51 234 / var(--tw-text-opacity, 1))}.text-white{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity, 1))}.text-blue-700{--tw-text-opacity:1;color:rgb(29 78 216 / var(--tw-text-opacity, 1))}.text-gray-400{--tw-text-opacity:1;color:rgb(156 163 175 / var(--tw-text-opacity, 1))}.text-purple-700{--tw-text-opacity:1;color:rgb(126 34 206 / var(--tw-text-opacity, 1))}.text-red-400{--tw-text-opacity:1;color:rgb(248 113 113 / var(--tw-text-opacity, 1))}.accent-green-500{accent-color:#22c55e}.shadow-2xl{--tw-shadow:0 25px 50px -12px rgb(0 0 0 / 0.25);--tw-shadow-colored:0 25px 50px -12px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-lg{--tw-shadow:0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-sm{--tw-shadow:0 1px 2px 0 rgb(0 0 0 / 0.05);--tw-shadow-colored:0 1px 2px 0 var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.drop-shadow-md{--tw-drop-shadow:drop-shadow(0 4px 3px rgb(0 0 0 / 0.07)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.06));filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.backdrop-blur-md{--tw-backdrop-blur:blur(12px);-webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)}.backdrop-blur-sm{--tw-backdrop-blur:blur(4px);-webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)}.transition-transform{transition-property:transform;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-all{transition-property:all;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.transition-colors{transition-property:color, background-color, border-color, fill, stroke, -webkit-text-decoration-color;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke;transition-property:color, background-color, border-color, text-decoration-color, fill, stroke, -webkit-text-decoration-color;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.hover\:scale-105:hover{--tw-scale-x:1.05;--tw-scale-y:1.05;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.hover\:bg-blue-600:hover{--tw-bg-opacity:1;background-color:rgb(37 99 235 / var(--tw-bg-opacity, 1))}.hover\:bg-green-600:hover{--tw-bg-opacity:1;background-color:rgb(22 163 74 / var(--tw-bg-opacity, 1))}.hover\:bg-indigo-600:hover{--tw-bg-opacity:1;background-color:rgb(79 70 229 / var(--tw-bg-opacity, 1))}.hover\:bg-purple-600:hover{--tw-bg-opacity:1;background-color:rgb(147 51 234 / var(--tw-bg-opacity, 1))}.hover\:bg-blue-200:hover{--tw-bg-opacity:1;background-color:rgb(191 219 254 / var(--tw-bg-opacity, 1))}.hover\:bg-purple-200:hover{--tw-bg-opacity:1;background-color:rgb(233 213 255 / var(--tw-bg-opacity, 1))}.hover\:text-red-500:hover{--tw-text-opacity:1;color:rgb(239 68 68 / var(--tw-text-opacity, 1))}.hover\:text-red-600:hover{--tw-text-opacity:1;color:rgb(220 38 38 / var(--tw-text-opacity, 1))}.hover\:shadow-md:hover{--tw-shadow:0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);--tw-shadow-colored:0 4px 6px -1px var(--tw-shadow-color), 0 2px 4px -2px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.focus\:border-purple-300:focus{--tw-border-opacity:1;border-color:rgb(216 180 254 / var(--tw-border-opacity, 1))}.focus\:border-purple-400:focus{--tw-border-opacity:1;border-color:rgb(192 132 252 / var(--tw-border-opacity, 1))}.focus\:outline-none:focus{outline:2px solid transparent;outline-offset:2px}@media (min-width: 640px){.sm\:flex-row{flex-direction:row}}@media (min-width: 768px){.md\:p-10{padding:2.5rem}.md\:text-5xl{font-size:3rem;line-height:1}}</style></head>
+<body>
+
+    <div id="editor-view">
+        <div class="max-w-5xl mx-auto bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl overflow-hidden border-2 border-purple-200">
+            <div class="bg-gradient-to-r from-purple-400 to-pink-400 p-8 text-center relative">
+                <h1 class="text-4xl md:text-5xl font-extrabold text-white tracking-wider drop-shadow-md">Falling Cloud Quiz Maker</h1>
+                <p class="text-purple-100 mt-3 text-lg font-semibold">Create your questions, add images, and launch the game!</p>
+            </div>
+            
+            <div class="p-6 md:p-10">
+                <div id="questions-list" class="space-y-6"><div class="bg-gray-50 rounded-2xl p-6 border-2 border-purple-100 shadow-sm relative transition-all hover:shadow-md">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-purple-700 bg-purple-100 px-4 py-1 rounded-full">Question 1</h3>
+                        <div class="flex items-center gap-3">
+                            <label class="cursor-pointer bg-purple-100 hover:bg-purple-200 text-purple-700 p-2 rounded-full transition-colors" title="Add Image">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                <input type="file" accept="image/*" class="hidden" onchange="handleImageUpload('j2lcnq5j5', this)">
+                            </label>
+                            <button onclick="deleteQuestion('j2lcnq5j5')" class="text-red-400 hover:text-red-600 bg-red-50 p-2 rounded-full transition-colors" title="Delete Question">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        
+                        <textarea oninput="updateQuestion('j2lcnq5j5', this.value)" placeholder="Enter your question here..." class="w-full text-xl p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-400 bg-white font-semibold resize-none" rows="2">Find the prepositions</textarea>
+                    </div>
+                <div class="space-y-3"><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-green-300 bg-green-50">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-j2lcnq5j5" onchange="markCorrect('j2lcnq5j5', 'dp85kcy0h')" checked="" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="in" oninput="updateOption('j2lcnq5j5', 'dp85kcy0h', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('j2lcnq5j5', 'dp85kcy0h')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-j2lcnq5j5" onchange="markCorrect('j2lcnq5j5', '3q4fs5o6m')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="me" oninput="updateOption('j2lcnq5j5', '3q4fs5o6m', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('j2lcnq5j5', '3q4fs5o6m')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-j2lcnq5j5" onchange="markCorrect('j2lcnq5j5', 'r0gylulys')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="is" oninput="updateOption('j2lcnq5j5', 'r0gylulys', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('j2lcnq5j5', 'r0gylulys')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-j2lcnq5j5" onchange="markCorrect('j2lcnq5j5', 'cr742no5d')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="am" oninput="updateOption('j2lcnq5j5', 'cr742no5d', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('j2lcnq5j5', 'cr742no5d')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-j2lcnq5j5" onchange="markCorrect('j2lcnq5j5', 'h9vpj2gql')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="are" oninput="updateOption('j2lcnq5j5', 'h9vpj2gql', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('j2lcnq5j5', 'h9vpj2gql')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><button class="mt-4 px-4 py-2 bg-blue-100 text-blue-700 font-bold rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-2 text-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    Add Option
+                </button></div></div><div class="bg-gray-50 rounded-2xl p-6 border-2 border-purple-100 shadow-sm relative transition-all hover:shadow-md">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-purple-700 bg-purple-100 px-4 py-1 rounded-full">Question 2</h3>
+                        <div class="flex items-center gap-3">
+                            <label class="cursor-pointer bg-purple-100 hover:bg-purple-200 text-purple-700 p-2 rounded-full transition-colors" title="Add Image">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                <input type="file" accept="image/*" class="hidden" onchange="handleImageUpload('vs4x7an5t', this)">
+                            </label>
+                            <button onclick="deleteQuestion('vs4x7an5t')" class="text-red-400 hover:text-red-600 bg-red-50 p-2 rounded-full transition-colors" title="Delete Question">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        
+                        <textarea oninput="updateQuestion('vs4x7an5t', this.value)" placeholder="Enter your question here..." class="w-full text-xl p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-400 bg-white font-semibold resize-none" rows="2">Find the prepositions</textarea>
+                    </div>
+                <div class="space-y-3"><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-green-300 bg-green-50">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-vs4x7an5t" onchange="markCorrect('vs4x7an5t', '3wxbtrxpl')" checked="" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="about" oninput="updateOption('vs4x7an5t', '3wxbtrxpl', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('vs4x7an5t', '3wxbtrxpl')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-vs4x7an5t" onchange="markCorrect('vs4x7an5t', '68u7n18yv')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="taste" oninput="updateOption('vs4x7an5t', '68u7n18yv', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('vs4x7an5t', '68u7n18yv')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-vs4x7an5t" onchange="markCorrect('vs4x7an5t', 'qmkvqug2n')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="seem" oninput="updateOption('vs4x7an5t', 'qmkvqug2n', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('vs4x7an5t', 'qmkvqug2n')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-vs4x7an5t" onchange="markCorrect('vs4x7an5t', 'r83texroy')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="me" oninput="updateOption('vs4x7an5t', 'r83texroy', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('vs4x7an5t', 'r83texroy')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><button class="mt-4 px-4 py-2 bg-blue-100 text-blue-700 font-bold rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-2 text-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    Add Option
+                </button></div></div><div class="bg-gray-50 rounded-2xl p-6 border-2 border-purple-100 shadow-sm relative transition-all hover:shadow-md">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-purple-700 bg-purple-100 px-4 py-1 rounded-full">Question 3</h3>
+                        <div class="flex items-center gap-3">
+                            <label class="cursor-pointer bg-purple-100 hover:bg-purple-200 text-purple-700 p-2 rounded-full transition-colors" title="Add Image">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                <input type="file" accept="image/*" class="hidden" onchange="handleImageUpload('pa5ro02ot', this)">
+                            </label>
+                            <button onclick="deleteQuestion('pa5ro02ot')" class="text-red-400 hover:text-red-600 bg-red-50 p-2 rounded-full transition-colors" title="Delete Question">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        
+                        <textarea oninput="updateQuestion('pa5ro02ot', this.value)" placeholder="Enter your question here..." class="w-full text-xl p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-400 bg-white font-semibold resize-none" rows="2">Find the prepositions</textarea>
+                    </div>
+                <div class="space-y-3"><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-green-300 bg-green-50">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-pa5ro02ot" onchange="markCorrect('pa5ro02ot', 'n6jr107le')" checked="" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="with" oninput="updateOption('pa5ro02ot', 'n6jr107le', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('pa5ro02ot', 'n6jr107le')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-pa5ro02ot" onchange="markCorrect('pa5ro02ot', '7ikcc5wea')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="like to" oninput="updateOption('pa5ro02ot', '7ikcc5wea', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('pa5ro02ot', '7ikcc5wea')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-pa5ro02ot" onchange="markCorrect('pa5ro02ot', 'a38q785vw')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="will" oninput="updateOption('pa5ro02ot', 'a38q785vw', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('pa5ro02ot', 'a38q785vw')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-pa5ro02ot" onchange="markCorrect('pa5ro02ot', 'a6ng2duch')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="could" oninput="updateOption('pa5ro02ot', 'a6ng2duch', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('pa5ro02ot', 'a6ng2duch')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><button class="mt-4 px-4 py-2 bg-blue-100 text-blue-700 font-bold rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-2 text-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    Add Option
+                </button></div></div><div class="bg-gray-50 rounded-2xl p-6 border-2 border-purple-100 shadow-sm relative transition-all hover:shadow-md">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-purple-700 bg-purple-100 px-4 py-1 rounded-full">Question 4</h3>
+                        <div class="flex items-center gap-3">
+                            <label class="cursor-pointer bg-purple-100 hover:bg-purple-200 text-purple-700 p-2 rounded-full transition-colors" title="Add Image">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                <input type="file" accept="image/*" class="hidden" onchange="handleImageUpload('xjlnr4nl2', this)">
+                            </label>
+                            <button onclick="deleteQuestion('xjlnr4nl2')" class="text-red-400 hover:text-red-600 bg-red-50 p-2 rounded-full transition-colors" title="Delete Question">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        
+                        <textarea oninput="updateQuestion('xjlnr4nl2', this.value)" placeholder="Enter your question here..." class="w-full text-xl p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-400 bg-white font-semibold resize-none" rows="2">Find the prepositions</textarea>
+                    </div>
+                <div class="space-y-3"><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-green-300 bg-green-50">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-xjlnr4nl2" onchange="markCorrect('xjlnr4nl2', '6norll065')" checked="" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="for" oninput="updateOption('xjlnr4nl2', '6norll065', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('xjlnr4nl2', '6norll065')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-xjlnr4nl2" onchange="markCorrect('xjlnr4nl2', '1ntv7150h')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="buy" oninput="updateOption('xjlnr4nl2', '1ntv7150h', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('xjlnr4nl2', '1ntv7150h')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-xjlnr4nl2" onchange="markCorrect('xjlnr4nl2', 't9xm0hiba')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="go" oninput="updateOption('xjlnr4nl2', 't9xm0hiba', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('xjlnr4nl2', 't9xm0hiba')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-xjlnr4nl2" onchange="markCorrect('xjlnr4nl2', '6snps9lv6')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="can" oninput="updateOption('xjlnr4nl2', '6snps9lv6', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('xjlnr4nl2', '6snps9lv6')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><button class="mt-4 px-4 py-2 bg-blue-100 text-blue-700 font-bold rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-2 text-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    Add Option
+                </button></div></div><div class="bg-gray-50 rounded-2xl p-6 border-2 border-purple-100 shadow-sm relative transition-all hover:shadow-md">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-purple-700 bg-purple-100 px-4 py-1 rounded-full">Question 5</h3>
+                        <div class="flex items-center gap-3">
+                            <label class="cursor-pointer bg-purple-100 hover:bg-purple-200 text-purple-700 p-2 rounded-full transition-colors" title="Add Image">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                <input type="file" accept="image/*" class="hidden" onchange="handleImageUpload('mpsdm2h2u', this)">
+                            </label>
+                            <button onclick="deleteQuestion('mpsdm2h2u')" class="text-red-400 hover:text-red-600 bg-red-50 p-2 rounded-full transition-colors" title="Delete Question">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        
+                        <textarea oninput="updateQuestion('mpsdm2h2u', this.value)" placeholder="Enter your question here..." class="w-full text-xl p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-400 bg-white font-semibold resize-none" rows="2">Find the prepositions</textarea>
+                    </div>
+                <div class="space-y-3"><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-green-300 bg-green-50">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-mpsdm2h2u" onchange="markCorrect('mpsdm2h2u', 'd116oxuli')" checked="" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="across" oninput="updateOption('mpsdm2h2u', 'd116oxuli', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('mpsdm2h2u', 'd116oxuli')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-mpsdm2h2u" onchange="markCorrect('mpsdm2h2u', 'c7xfes5ab')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="am" oninput="updateOption('mpsdm2h2u', 'c7xfes5ab', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('mpsdm2h2u', 'c7xfes5ab')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-mpsdm2h2u" onchange="markCorrect('mpsdm2h2u', 'bhpncgcpi')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="me" oninput="updateOption('mpsdm2h2u', 'bhpncgcpi', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('mpsdm2h2u', 'bhpncgcpi')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-mpsdm2h2u" onchange="markCorrect('mpsdm2h2u', '6u6u1tws5')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="you" oninput="updateOption('mpsdm2h2u', '6u6u1tws5', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('mpsdm2h2u', '6u6u1tws5')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-mpsdm2h2u" onchange="markCorrect('mpsdm2h2u', 'oukkhbrrr')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="who" oninput="updateOption('mpsdm2h2u', 'oukkhbrrr', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('mpsdm2h2u', 'oukkhbrrr')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><button class="mt-4 px-4 py-2 bg-blue-100 text-blue-700 font-bold rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-2 text-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    Add Option
+                </button></div></div><div class="bg-gray-50 rounded-2xl p-6 border-2 border-purple-100 shadow-sm relative transition-all hover:shadow-md">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-purple-700 bg-purple-100 px-4 py-1 rounded-full">Question 6</h3>
+                        <div class="flex items-center gap-3">
+                            <label class="cursor-pointer bg-purple-100 hover:bg-purple-200 text-purple-700 p-2 rounded-full transition-colors" title="Add Image">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                <input type="file" accept="image/*" class="hidden" onchange="handleImageUpload('fv1b0tk73', this)">
+                            </label>
+                            <button onclick="deleteQuestion('fv1b0tk73')" class="text-red-400 hover:text-red-600 bg-red-50 p-2 rounded-full transition-colors" title="Delete Question">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        
+                        <textarea oninput="updateQuestion('fv1b0tk73', this.value)" placeholder="Enter your question here..." class="w-full text-xl p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-400 bg-white font-semibold resize-none" rows="2">Find the prepositions</textarea>
+                    </div>
+                <div class="space-y-3"><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-green-300 bg-green-50">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-fv1b0tk73" onchange="markCorrect('fv1b0tk73', 'g1d1tm4ur')" checked="" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="after" oninput="updateOption('fv1b0tk73', 'g1d1tm4ur', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('fv1b0tk73', 'g1d1tm4ur')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-fv1b0tk73" onchange="markCorrect('fv1b0tk73', 'hzs9pc1z2')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="go" oninput="updateOption('fv1b0tk73', 'hzs9pc1z2', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('fv1b0tk73', 'hzs9pc1z2')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-fv1b0tk73" onchange="markCorrect('fv1b0tk73', 'odmfyxnii')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="fly" oninput="updateOption('fv1b0tk73', 'odmfyxnii', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('fv1b0tk73', 'odmfyxnii')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-fv1b0tk73" onchange="markCorrect('fv1b0tk73', 'rko4obmki')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="be" oninput="updateOption('fv1b0tk73', 'rko4obmki', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('fv1b0tk73', 'rko4obmki')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><button class="mt-4 px-4 py-2 bg-blue-100 text-blue-700 font-bold rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-2 text-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    Add Option
+                </button></div></div><div class="bg-gray-50 rounded-2xl p-6 border-2 border-purple-100 shadow-sm relative transition-all hover:shadow-md">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-purple-700 bg-purple-100 px-4 py-1 rounded-full">Question 7</h3>
+                        <div class="flex items-center gap-3">
+                            <label class="cursor-pointer bg-purple-100 hover:bg-purple-200 text-purple-700 p-2 rounded-full transition-colors" title="Add Image">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                <input type="file" accept="image/*" class="hidden" onchange="handleImageUpload('yzm6g88gq', this)">
+                            </label>
+                            <button onclick="deleteQuestion('yzm6g88gq')" class="text-red-400 hover:text-red-600 bg-red-50 p-2 rounded-full transition-colors" title="Delete Question">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        
+                        <textarea oninput="updateQuestion('yzm6g88gq', this.value)" placeholder="Enter your question here..." class="w-full text-xl p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-400 bg-white font-semibold resize-none" rows="2">Find the prepositions</textarea>
+                    </div>
+                <div class="space-y-3"><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-green-300 bg-green-50">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-yzm6g88gq" onchange="markCorrect('yzm6g88gq', 'w8d9bavlx')" checked="" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="below" oninput="updateOption('yzm6g88gq', 'w8d9bavlx', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('yzm6g88gq', 'w8d9bavlx')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-yzm6g88gq" onchange="markCorrect('yzm6g88gq', '3jih4v5sw')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="love" oninput="updateOption('yzm6g88gq', '3jih4v5sw', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('yzm6g88gq', '3jih4v5sw')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-yzm6g88gq" onchange="markCorrect('yzm6g88gq', 'jzom3mrfk')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="want" oninput="updateOption('yzm6g88gq', 'jzom3mrfk', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('yzm6g88gq', 'jzom3mrfk')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-yzm6g88gq" onchange="markCorrect('yzm6g88gq', 'om3z92rnd')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="need" oninput="updateOption('yzm6g88gq', 'om3z92rnd', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('yzm6g88gq', 'om3z92rnd')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><button class="mt-4 px-4 py-2 bg-blue-100 text-blue-700 font-bold rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-2 text-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    Add Option
+                </button></div></div><div class="bg-gray-50 rounded-2xl p-6 border-2 border-purple-100 shadow-sm relative transition-all hover:shadow-md">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-purple-700 bg-purple-100 px-4 py-1 rounded-full">Question 8</h3>
+                        <div class="flex items-center gap-3">
+                            <label class="cursor-pointer bg-purple-100 hover:bg-purple-200 text-purple-700 p-2 rounded-full transition-colors" title="Add Image">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                <input type="file" accept="image/*" class="hidden" onchange="handleImageUpload('z07ibbgja', this)">
+                            </label>
+                            <button onclick="deleteQuestion('z07ibbgja')" class="text-red-400 hover:text-red-600 bg-red-50 p-2 rounded-full transition-colors" title="Delete Question">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        
+                        <textarea oninput="updateQuestion('z07ibbgja', this.value)" placeholder="Enter your question here..." class="w-full text-xl p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-400 bg-white font-semibold resize-none" rows="2">Find the prepositions</textarea>
+                    </div>
+                <div class="space-y-3"><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-green-300 bg-green-50">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-z07ibbgja" onchange="markCorrect('z07ibbgja', 'at7gqi772')" checked="" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="until" oninput="updateOption('z07ibbgja', 'at7gqi772', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('z07ibbgja', 'at7gqi772')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-z07ibbgja" onchange="markCorrect('z07ibbgja', '6eq562mz9')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="I" oninput="updateOption('z07ibbgja', '6eq562mz9', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('z07ibbgja', '6eq562mz9')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-z07ibbgja" onchange="markCorrect('z07ibbgja', 'wj6mqbkqj')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="which" oninput="updateOption('z07ibbgja', 'wj6mqbkqj', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('z07ibbgja', 'wj6mqbkqj')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><button class="mt-4 px-4 py-2 bg-blue-100 text-blue-700 font-bold rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-2 text-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    Add Option
+                </button></div></div><div class="bg-gray-50 rounded-2xl p-6 border-2 border-purple-100 shadow-sm relative transition-all hover:shadow-md">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-purple-700 bg-purple-100 px-4 py-1 rounded-full">Question 9</h3>
+                        <div class="flex items-center gap-3">
+                            <label class="cursor-pointer bg-purple-100 hover:bg-purple-200 text-purple-700 p-2 rounded-full transition-colors" title="Add Image">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                <input type="file" accept="image/*" class="hidden" onchange="handleImageUpload('8vh1yfno6', this)">
+                            </label>
+                            <button onclick="deleteQuestion('8vh1yfno6')" class="text-red-400 hover:text-red-600 bg-red-50 p-2 rounded-full transition-colors" title="Delete Question">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        
+                        <textarea oninput="updateQuestion('8vh1yfno6', this.value)" placeholder="Enter your question here..." class="w-full text-xl p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-400 bg-white font-semibold resize-none" rows="2">Find the prepositions</textarea>
+                    </div>
+                <div class="space-y-3"><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-green-300 bg-green-50">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-8vh1yfno6" onchange="markCorrect('8vh1yfno6', 'yc1d00y4l')" checked="" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="under" oninput="updateOption('8vh1yfno6', 'yc1d00y4l', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('8vh1yfno6', 'yc1d00y4l')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-8vh1yfno6" onchange="markCorrect('8vh1yfno6', 't9lhbrrxi')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="desk" oninput="updateOption('8vh1yfno6', 't9lhbrrxi', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('8vh1yfno6', 't9lhbrrxi')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-8vh1yfno6" onchange="markCorrect('8vh1yfno6', 'm2xj5mqj9')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="the" oninput="updateOption('8vh1yfno6', 'm2xj5mqj9', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('8vh1yfno6', 'm2xj5mqj9')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-8vh1yfno6" onchange="markCorrect('8vh1yfno6', '379nq0a65')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="an" oninput="updateOption('8vh1yfno6', '379nq0a65', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('8vh1yfno6', '379nq0a65')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><button class="mt-4 px-4 py-2 bg-blue-100 text-blue-700 font-bold rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-2 text-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    Add Option
+                </button></div></div><div class="bg-gray-50 rounded-2xl p-6 border-2 border-purple-100 shadow-sm relative transition-all hover:shadow-md">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-purple-700 bg-purple-100 px-4 py-1 rounded-full">Question 10</h3>
+                        <div class="flex items-center gap-3">
+                            <label class="cursor-pointer bg-purple-100 hover:bg-purple-200 text-purple-700 p-2 rounded-full transition-colors" title="Add Image">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                <input type="file" accept="image/*" class="hidden" onchange="handleImageUpload('kr1svt5fw', this)">
+                            </label>
+                            <button onclick="deleteQuestion('kr1svt5fw')" class="text-red-400 hover:text-red-600 bg-red-50 p-2 rounded-full transition-colors" title="Delete Question">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        
+                        <textarea oninput="updateQuestion('kr1svt5fw', this.value)" placeholder="Enter your question here..." class="w-full text-xl p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-400 bg-white font-semibold resize-none" rows="2">Find the prepositions</textarea>
+                    </div>
+                <div class="space-y-3"><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-green-300 bg-green-50">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-kr1svt5fw" onchange="markCorrect('kr1svt5fw', 'cvstnw5rh')" checked="" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="outside" oninput="updateOption('kr1svt5fw', 'cvstnw5rh', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('kr1svt5fw', 'cvstnw5rh')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-kr1svt5fw" onchange="markCorrect('kr1svt5fw', 'aagz7vcr6')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="tree" oninput="updateOption('kr1svt5fw', 'aagz7vcr6', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('kr1svt5fw', 'aagz7vcr6')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-kr1svt5fw" onchange="markCorrect('kr1svt5fw', 'hjxyxdj7w')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="would" oninput="updateOption('kr1svt5fw', 'hjxyxdj7w', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('kr1svt5fw', 'hjxyxdj7w')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><div class="flex items-center gap-3 bg-white p-3 rounded-xl border-2 border-gray-100">
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-kr1svt5fw" onchange="markCorrect('kr1svt5fw', 'sii8894wq')" class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="" oninput="updateOption('kr1svt5fw', 'sii8894wq', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('kr1svt5fw', 'sii8894wq')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    </div><button class="mt-4 px-4 py-2 bg-blue-100 text-blue-700 font-bold rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-2 text-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    Add Option
+                </button></div></div></div>
+
+                <div class="mt-10 flex flex-col sm:flex-row justify-center gap-6 pt-8 border-t-2 border-gray-100">
+                    <button onclick="addQuestion()" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-4 px-8 rounded-full shadow-lg transition-transform hover:scale-105 text-lg">
+                        + Add New Question
+                    </button>
+                    <button onclick="saveGame()" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-8 rounded-full shadow-lg transition-transform hover:scale-105 text-lg">
+                        💾 Save Game
+                    </button>
+                    <button onclick="startGame()" class="bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-10 rounded-full shadow-lg transition-transform hover:scale-105 text-xl animate-pulse">
+                        Play Game ✨
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-view">
+        <div class="game-hud top-4 right-4 border-2 border-purple-200">
+            Question: <span id="hud-question" class="text-purple-600">1/1</span>
+        </div>
+
+        <div id="question-container">
+            <img id="question-image-display" src="" alt="Question Image">
+            <div id="question-text">Loading...</div>
+        </div>
+
+        <div id="falling-options-container">
+            <!-- Falling options dynamically added here -->
+        </div>
+
+        <!-- End Screen -->
+        <div id="end-screen" class="absolute inset-0 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm z-50 hidden">
+            <div class="bg-white p-10 rounded-3xl shadow-2xl border-4 border-pink-300 text-center max-w-lg w-11/12">
+                <h2 class="text-5xl font-bold text-pink-500 mb-4">Great!</h2>
+                <p class="text-2xl text-gray-700 font-semibold mb-8">You have completed the quiz!</p>
+                <div class="flex flex-col sm:flex-row justify-center gap-4">
+                    <button onclick="returnToEditor()" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-4 px-8 rounded-full shadow-lg transition-transform hover:scale-105 text-xl">
+                        Edit Game
+                    </button>
+                    <button onclick="replayGame()" class="bg-green-500 hover:bg-green-600 text-white font-bold py-4 px-8 rounded-full shadow-lg transition-transform hover:scale-105 text-xl">
+                        Replay
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="custom-message">
+        <div class="message-content">
+            <h3 id="msg-title" class="text-4xl font-bold mb-2"></h3>
+            <p id="msg-text" class="text-2xl font-bold"></p>
+        </div>
+    </div>
+
+    <script>
+        let quizData = [
+            {
+                id: generateId(),
+                text: "What color is the sky on a clear day?",
+                image: null,
+                options: [
+                    { id: generateId(), text: "Green", isCorrect: false },
+                    { id: generateId(), text: "Blue", isCorrect: true },
+                    { id: generateId(), text: "Red", isCorrect: false }
+                ]
+            }
+        ];
+
+        let currentQuestionIndex = 0;
+        const CLOUD_IMAGES = ['3_2.png', '4_2.png', '5_2.png', '6_2.png'];
+
+        function generateId() {
+            return Math.random().toString(36).substr(2, 9);
+        }
+
+        function escapeHTML(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // Init Check for Auto Start
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.GAME_DATA) {
+                quizData = window.GAME_DATA;
+            }
+            if (window.AUTO_START_PLAY) {
+                startGame();
+            } else {
+                renderEditor();
+            }
+        });
+
+        function showMessage(title, text, isCorrect, callback) {
+            const modal = document.getElementById('custom-message');
+            const titleEl = document.getElementById('msg-title');
+            const textEl = document.getElementById('msg-text');
+
+            titleEl.textContent = title;
+            textEl.textContent = text;
+            
+            if (isCorrect === true) {
+                titleEl.className = "text-4xl md:text-5xl font-bold mb-2 text-green-600 drop-shadow-md";
+                textEl.className = "text-xl md:text-2xl font-bold text-green-700";
+            } else if (isCorrect === false) {
+                titleEl.className = "text-4xl md:text-5xl font-bold mb-2 text-red-500 drop-shadow-md";
+                textEl.className = "text-xl md:text-2xl font-bold text-red-600";
+            } else {
+                titleEl.className = "text-4xl md:text-5xl font-bold mb-2 text-purple-600 drop-shadow-md";
+                textEl.className = "text-xl md:text-2xl font-bold text-purple-700";
+            }
+
+            modal.style.display = 'flex';
+
+            setTimeout(() => {
+                modal.style.display = 'none';
+                if(callback) callback();
+            }, 1500);
+        }
+
+        // --- STREAMING_CHUNK: Editor Functions ---
+        function handleImageUpload(qId, input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const q = quizData.find(q => q.id === qId);
+                    if (q) {
+                        q.image = e.target.result;
+                        renderEditor();
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function removeImage(qId) {
+            const q = quizData.find(q => q.id === qId);
+            if (q) {
+                q.image = null;
+                renderEditor();
+            }
+        }
+
+        function renderEditor() {
+            const list = document.getElementById('questions-list');
+            list.innerHTML = '';
+
+            quizData.forEach((q, qIndex) => {
+                const card = document.createElement('div');
+                card.className = 'bg-gray-50 rounded-2xl p-6 border-2 border-purple-100 shadow-sm relative transition-all hover:shadow-md';
+                
+                let imagePreviewHtml = '';
+                if (q.image) {
+                    imagePreviewHtml = `
+                        <div class="relative inline-block mt-3 mb-2">
+                            <img src="${q.image}" class="h-32 object-cover rounded-lg border-2 border-purple-200">
+                            <button onclick="removeImage('${q.id}')" class="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-1 hover:bg-red-600">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
+                        </div>
+                    `;
+                }
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-xl font-bold text-purple-700 bg-purple-100 px-4 py-1 rounded-full">Question ${qIndex + 1}</h3>
+                        <div class="flex items-center gap-3">
+                            <label class="cursor-pointer bg-purple-100 hover:bg-purple-200 text-purple-700 p-2 rounded-full transition-colors" title="Add Image">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                <input type="file" accept="image/*" class="hidden" onchange="handleImageUpload('${q.id}', this)">
+                            </label>
+                            <button onclick="deleteQuestion('${q.id}')" class="text-red-400 hover:text-red-600 bg-red-50 p-2 rounded-full transition-colors" title="Delete Question">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        ${imagePreviewHtml}
+                        <textarea oninput="updateQuestion('${q.id}', this.value)" placeholder="Enter your question here..." class="w-full text-xl p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-purple-400 bg-white font-semibold resize-none" rows="2">${escapeHTML(q.text)}</textarea>
+                    </div>
+                `;
+
+                const optionsContainer = document.createElement('div');
+                optionsContainer.className = 'space-y-3';
+                
+                q.options.forEach((opt) => {
+                    const optRow = document.createElement('div');
+                    optRow.className = `flex items-center gap-3 bg-white p-3 rounded-xl border-2 ${opt.isCorrect ? 'border-green-300 bg-green-50' : 'border-gray-100'}`;
+                    
+                    optRow.innerHTML = `
+                        <div class="flex-shrink-0 flex items-center justify-center w-10">
+                            <input type="radio" name="correct-${q.id}" onchange="markCorrect('${q.id}', '${opt.id}')" ${opt.isCorrect ? 'checked' : ''} class="w-6 h-6 accent-green-500 cursor-pointer" title="Mark as correct answer">
+                        </div>
+                        <input type="text" value="${escapeHTML(opt.text)}" oninput="updateOption('${q.id}', '${opt.id}', this.value)" placeholder="Option text..." class="flex-1 p-2 text-lg focus:outline-none bg-transparent font-medium border-b-2 border-transparent focus:border-purple-300">
+                        <button onclick="deleteOption('${q.id}', '${opt.id}')" class="text-gray-400 hover:text-red-500 p-2">
+                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                    `;
+                    optionsContainer.appendChild(optRow);
+                });
+
+                const addOptBtn = document.createElement('button');
+                addOptBtn.className = 'mt-4 px-4 py-2 bg-blue-100 text-blue-700 font-bold rounded-lg hover:bg-blue-200 transition-colors flex items-center gap-2 text-sm';
+                addOptBtn.innerHTML = `
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    Add Option
+                `;
+                addOptBtn.onclick = () => addOption(q.id);
+                optionsContainer.appendChild(addOptBtn);
+
+                card.appendChild(optionsContainer);
+                list.appendChild(card);
+            });
+        }
+
+        function addQuestion() {
+            quizData.push({
+                id: generateId(),
+                text: '',
+                image: null,
+                options: [
+                    { id: generateId(), text: '', isCorrect: true },
+                    { id: generateId(), text: '', isCorrect: false }
+                ]
+            });
+            renderEditor();
+        }
+
+        function deleteQuestion(id) {
+            if(quizData.length === 1) {
+                showMessage("Hold on!", "You must have at least one question.", null);
+                return;
+            }
+            quizData = quizData.filter(q => q.id !== id);
+            renderEditor();
+        }
+
+        function updateQuestion(id, val) {
+            const q = quizData.find(q => q.id === id);
+            if(q) q.text = val;
+        }
+
+        function addOption(qId) {
+            const q = quizData.find(q => q.id === qId);
+            if (q && q.options.length < 5) { 
+                q.options.push({ id: generateId(), text: '', isCorrect: false });
+                renderEditor();
+            } else {
+                showMessage("Limit Reached", "Maximum 5 options per question.", null);
+            }
+        }
+
+        function deleteOption(qId, optId) {
+            const q = quizData.find(q => q.id === qId);
+            if (q && q.options.length > 2) {
+                const isDeletingCorrect = q.options.find(o => o.id === optId).isCorrect;
+                q.options = q.options.filter(o => o.id !== optId);
+                if (isDeletingCorrect) q.options[0].isCorrect = true;
+                renderEditor();
+            } else {
+                showMessage("Hold on!", "A question must have at least 2 options.", null);
+            }
+        }
+
+        function updateOption(qId, optId, val) {
+            const q = quizData.find(q => q.id === qId);
+            if(q) {
+                const opt = q.options.find(o => o.id === optId);
+                if(opt) opt.text = val;
+            }
+        }
+
+        function markCorrect(qId, optId) {
+            const q = quizData.find(q => q.id === qId);
+            if(q) {
+                q.options.forEach(o => { o.isCorrect = (o.id === optId); });
+                renderEditor(); 
+            }
+        }
+
+        function saveGame() {
+            // Setup script to auto-start play mode in downloaded file
+            const saveScript = document.getElementById('save-data');
+            const dataJson = JSON.stringify(quizData);
+            saveScript.textContent = `\nwindow.GAME_DATA = ${dataJson};\nwindow.AUTO_START_PLAY = true;\n`;
+            
+            const htmlContent = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+            
+            // Revert the script tag back to false so current window doesn't change behavior if refreshed
+            saveScript.textContent = `\nwindow.GAME_DATA = ${dataJson};\nwindow.AUTO_START_PLAY = false;\n`;
+
+            const blob = new Blob([htmlContent], { type: "text/html" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "my_cloud_game.html";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showMessage("Success!", "Game saved! Open the downloaded file to play directly.", true);
+        }
+
+        // --- STREAMING_CHUNK: Game Logic ---
+        function startGame() {
+            for (let q of quizData) {
+                if (!q.text.trim() && !q.image) {
+                    showMessage("Missing Information", "Please enter a question or add an image.", null);
+                    return;
+                }
+                for (let o of q.options) {
+                    if (!o.text.trim()) {
+                        showMessage("Missing Information", "Please fill in all options.", null);
+                        return;
+                    }
+                }
+            }
+
+            document.getElementById('editor-view').style.display = 'none';
+            document.getElementById('game-view').style.display = 'block';
+            document.getElementById('end-screen').classList.add('hidden');
+            
+            currentQuestionIndex = 0;
+            loadGameQuestion();
+        }
+
+        function loadGameQuestion() {
+            document.getElementById('hud-question').textContent = `${currentQuestionIndex + 1}/${quizData.length}`;
+            const q = quizData[currentQuestionIndex];
+            
+            const imgEl = document.getElementById('question-image-display');
+            if (q.image) {
+                imgEl.src = q.image;
+                imgEl.style.display = 'block';
+            } else {
+                imgEl.src = '';
+                imgEl.style.display = 'none';
+            }
+
+            let textLen = q.text.length;
+            let hasImage = !!q.image;
+            let fontSize = hasImage ? "2.5rem" : "3.5rem";
+            if (textLen > 100) fontSize = hasImage ? "1.2rem" : "1.5rem";
+            else if (textLen > 50) fontSize = hasImage ? "1.5rem" : "2rem";
+            else if (textLen > 25) fontSize = hasImage ? "2rem" : "2.5rem";
+            
+            const qTextEl = document.getElementById('question-text');
+            qTextEl.style.fontSize = fontSize;
+            qTextEl.innerHTML = escapeHTML(q.text);
+
+            const container = document.getElementById('falling-options-container');
+            container.innerHTML = '';
+
+            const shuffledOptions = [...q.options].sort(() => Math.random() - 0.5);
+            const numOpts = shuffledOptions.length;
+            const sectionWidth = 100 / numOpts; 
+
+            shuffledOptions.forEach((opt, index) => {
+                const optElement = document.createElement('div');
+                optElement.className = 'falling-option';
+                
+                const randomImg = CLOUD_IMAGES[Math.floor(Math.random() * CLOUD_IMAGES.length)];
+                optElement.style.backgroundImage = `url('${randomImg}')`;
+
+                const minLeft = (index * sectionWidth) + 2; 
+                const maxLeft = ((index + 1) * sectionWidth) - 35; 
+                const safeMax = Math.max(minLeft, maxLeft);
+                const randomLeft = minLeft + Math.random() * (safeMax - minLeft);
+                
+                optElement.style.left = `${randomLeft}vw`;
+
+                // Stagger delays so they drop 1-2 at a time with big gaps
+                const groupIndex = Math.floor(index / 2);
+                const baseDelay = groupIndex * 6; // 6 seconds apart
+                const randomStagger = Math.random() * 2; 
+                const animDelay = baseDelay + randomStagger; 
+
+                optElement.style.animationDelay = `${animDelay}s`;
+                optElement.innerHTML = `<div class="falling-option-text">${escapeHTML(opt.text)}</div>`;
+                
+                optElement.onclick = () => checkAnswer(opt.isCorrect, optElement);
+
+                container.appendChild(optElement);
+            });
+        }
+
+        function checkAnswer(isCorrect, clickedElement) {
+            if (isCorrect) {
+                clickedElement.style.animationPlayState = 'paused';
+                showMessage("Yay!", "Excellent!", true, nextQuestion);
+            } else {
+                clickedElement.style.visibility = 'hidden'; 
+                showMessage("Oops!", "Try again!", false, null); 
+            }
+        }
+
+        function nextQuestion() {
+            currentQuestionIndex++;
+            if (currentQuestionIndex < quizData.length) {
+                loadGameQuestion();
+            } else {
+                const container = document.getElementById('falling-options-container');
+                container.innerHTML = ''; 
+                document.getElementById('end-screen').classList.remove('hidden');
+            }
+        }
+
+        function returnToEditor() {
+            document.getElementById('game-view').style.display = 'none';
+            document.getElementById('editor-view').style.display = 'block';
+        }
+
+        function replayGame() {
+            currentQuestionIndex = 0;
+            document.getElementById('end-screen').classList.add('hidden');
+            loadGameQuestion();
+        }
+    </script>
+
+</body></html>
